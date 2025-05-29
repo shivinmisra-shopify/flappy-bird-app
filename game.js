@@ -290,8 +290,8 @@ function createCash() {
     const yVariation = pipeGap * 0.3; // 30% of the gap size for variation
     const y = gapMiddle + (Math.random() * yVariation - yVariation/2);
 
-    // Generate a value that's a multiple of 100 between 100-500
-    const value = (Math.floor(Math.random() * 5) + 1) * 100;
+    // Generate a value that's a multiple of 100 between 300-1000
+    const value = (Math.floor(Math.random() * 8) + 3) * 100; // Random value between 300-1000
 
     const newCash = {
         x: canvas.width,
