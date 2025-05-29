@@ -42,6 +42,27 @@ const pipeCapOverhang = 5;
 const clouds = [];
 const cloudSpeed = 0.3; // Slower than pipes for parallax effect
 
+// Cash properties
+const cashItems = [];
+const cashWidth = 30;
+const cashHeight = 30;
+const cashSpawnChance = 0.002; // Reduced to 0.2% chance per frame
+const cashSpeed = 1; // Same speed as pipes
+const minDistanceBetweenCash = 500; // Minimum distance between cash items
+
+// Load cash image
+const cashImage = new Image();
+cashImage.src = 'cash-icon.png';
+
+// Add image load handlers
+cashImage.onload = function() {
+    console.log('Cash image loaded successfully');
+};
+
+cashImage.onerror = function() {
+    console.error('Failed to load cash image');
+};
+
 // Initialize clouds
 function initClouds() {
     // Create several clouds at random positions
@@ -249,6 +270,108 @@ function checkCollision() {
     return false;
 }
 
+// Create a new cash item
+function createCash() {
+    // Don't create new cash if there's already one on screen
+    if (cashItems.length > 0) {
+        return;
+    }
+
+    // Find the most recent pipe to position cash between its gap
+    const lastPipe = pipes[pipes.length - 1];
+    if (!lastPipe) {
+        return;
+    }
+
+    // Calculate the middle of the pipe gap
+    const gapMiddle = lastPipe.top.y + (pipeGap / 2);
+
+    // Add some random variation to the Y position, but keep it within the gap
+    const yVariation = pipeGap * 0.3; // 30% of the gap size for variation
+    const y = gapMiddle + (Math.random() * yVariation - yVariation/2);
+
+    // Generate a value that's a multiple of 100 between 100-500
+    const value = (Math.floor(Math.random() * 5) + 1) * 100;
+
+    const newCash = {
+        x: canvas.width,
+        y: y,
+        width: cashWidth,
+        height: cashHeight,
+        value: value,
+        collected: false
+    };
+
+    cashItems.push(newCash);
+}
+
+// Draw cash items
+function drawCash() {
+    if (cashItems.length === 0) {
+        return;
+    }
+
+    cashItems.forEach(cash => {
+        if (!cash.collected) {
+            // Draw cash image if loaded, otherwise draw a placeholder
+            if (cashImage.complete) {
+                ctx.drawImage(cashImage, cash.x, cash.y, cash.width, cash.height);
+            } else {
+                // Fallback to a yellow rectangle if image isn't loaded
+                ctx.fillStyle = '#FFD700';
+                ctx.fillRect(cash.x, cash.y, cash.width, cash.height);
+            }
+
+            // Draw cash value
+            ctx.fillStyle = '#FFD700';
+            ctx.font = '12px Arial';
+            ctx.fillText(`$${cash.value}`, cash.x, cash.y - 5);
+        }
+    });
+}
+
+// Update cash positions
+function updateCash() {
+    // Only try to spawn new cash if there are no cash items on screen
+    if (cashItems.length === 0 && Math.random() < cashSpawnChance) {
+        createCash();
+    }
+
+    // Update existing cash positions
+    for (let i = cashItems.length - 1; i >= 0; i--) {
+        cashItems[i].x -= cashSpeed;
+
+        // Remove cash that's off screen or collected
+        if (cashItems[i].x + cashItems[i].width < 0 || cashItems[i].collected) {
+            cashItems.splice(i, 1);
+        }
+    }
+}
+
+// Check collision with cash
+function checkCashCollision() {
+    cashItems.forEach(cash => {
+        if (!cash.collected &&
+            bird.x < cash.x + cash.width &&
+            bird.x + bird.width > cash.x &&
+            bird.y < cash.y + cash.height &&
+            bird.y + bird.height > cash.y) {
+
+            cash.collected = true;
+            score += cash.value;
+
+            // Create score animation for cash collection
+            scoreAnimation = {
+                active: true,
+                x: cash.x,
+                y: cash.y,
+                timer: 60,
+                value: cash.value
+            };
+        }
+    });
+}
+
 // Update game state
 function update() {
     if (!gameRunning) return;
@@ -310,6 +433,12 @@ function update() {
         if (checkCollision()) {
             gameRunning = false;
         }
+
+        // Update cash
+        updateCash();
+
+        // Check cash collisions
+        checkCashCollision();
     }
     else {
         // Make bird hover slightly up and down when waiting
@@ -382,6 +511,9 @@ function draw() {
         ctx.textAlign = 'left'; // Reset text alignment
     }
 
+    // Draw cash items
+    drawCash();
+
     // Always show start instructions until game begins
     if (!gameStarted) {
         ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
@@ -436,6 +568,7 @@ canvas.addEventListener('click', function() {
         // Clear and reinitialize clouds when restarting
         clouds.length = 0;
         initClouds();
+        cashItems.length = 0; // Clear cash items
     }
 });
 
