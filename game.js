@@ -98,6 +98,11 @@ let scoreAnimation = {
     value: 0
 };
 
+// Add after other game state variables
+let currentCashValue = 100; // Starting cash value
+const CASH_INCREMENT = 100; // How much to increase by each time
+const MAX_CASH_VALUE = 1000; // Maximum cash value
+
 // Jump when screen is clicked - also starts the game
 canvas.addEventListener('click', function() {
     if (!gameStarted) {
@@ -277,32 +282,29 @@ function createCash() {
         return;
     }
 
-    // Find the most recent pipe to position cash between its gap
-    const lastPipe = pipes[pipes.length - 1];
-    if (!lastPipe) {
-        return;
-    }
+    // Calculate the middle of the screen
+    const screenMiddle = canvas.height / 2;
 
-    // Calculate the middle of the pipe gap
-    const gapMiddle = lastPipe.top.y + (pipeGap / 2);
-
-    // Add some random variation to the Y position, but keep it within the gap
-    const yVariation = pipeGap * 0.3; // 30% of the gap size for variation
-    const y = gapMiddle + (Math.random() * yVariation - yVariation/2);
-
-    // Generate a value that's a multiple of 100 between 300-1000
-    const value = (Math.floor(Math.random() * 8) + 3) * 100; // Random value between 300-1000
+    // Add some random variation to the Y position, but keep it centered
+    const yVariation = 100; // Maximum 100 pixels up or down from center
+    const y = screenMiddle + (Math.random() * yVariation - yVariation/2);
 
     const newCash = {
         x: canvas.width,
         y: y,
         width: cashWidth,
         height: cashHeight,
-        value: value,
+        value: currentCashValue,
         collected: false
     };
 
     cashItems.push(newCash);
+
+    // Increment cash value for next spawn
+    currentCashValue += CASH_INCREMENT;
+    if (currentCashValue > MAX_CASH_VALUE) {
+        currentCashValue = 100; // Reset to 100 when it reaches 1000
+    }
 }
 
 // Draw cash items
@@ -348,7 +350,7 @@ function updateCash() {
     }
 }
 
-// Check collision with cash
+// Modify the checkCashCollision function to show the current value
 function checkCashCollision() {
     cashItems.forEach(cash => {
         if (!cash.collected &&
@@ -552,7 +554,7 @@ function gameLoop() {
     requestAnimationFrame(gameLoop);
 }
 
-// Restart game
+// Modify the restart game code to reset cash value
 canvas.addEventListener('click', function() {
     if (!gameRunning) {
         // Reset game
@@ -564,11 +566,10 @@ canvas.addEventListener('click', function() {
         gameRunning = true;
         gameStarted = false;
         scoreAnimation.active = false;
-
-        // Clear and reinitialize clouds when restarting
+        cashItems.length = 0;
+        currentCashValue = 100; // Reset cash value to 100
         clouds.length = 0;
         initClouds();
-        cashItems.length = 0; // Clear cash items
     }
 });
 
